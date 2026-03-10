@@ -62,6 +62,33 @@ proposal -> specs --> tasks -> apply -> verify -> archive
 ### Result Contract
 Each phase returns: `status`, `executive_summary`, `artifacts`, `next_recommended`, `risks`.
 
+### Sub-Agent Context Protocol
+
+Sub-agents get a fresh context with NO memory. The orchestrator controls context access.
+
+#### Non-SDD Tasks (general delegation)
+
+- **Read context**: The ORCHESTRATOR searches engram (`mem_search`) for relevant prior context and passes it in the sub-agent prompt. The sub-agent does NOT search engram itself.
+- **Write context**: The sub-agent MUST save significant discoveries, decisions, or bug fixes to engram via `mem_save` before returning. It has the full detail — if it waits for the orchestrator, nuance is lost.
+- **When to include engram write instructions**: Always. Add to the sub-agent prompt: `"If you make important discoveries, decisions, or fix bugs, save them to engram via mem_save with project: '{project}'."`
+
+#### SDD Phases
+
+Each SDD phase has explicit read/write rules based on the dependency graph:
+
+| Phase | Reads artifacts from backend | Writes artifact |
+|-------|------------------------------|-----------------|
+| `sdd-explore` | Nothing | Yes (`explore`) |
+| `sdd-propose` | Exploration (if exists, optional) | Yes (`proposal`) |
+| `sdd-spec` | Proposal (required) | Yes (`spec`) |
+| `sdd-design` | Proposal (required) | Yes (`design`) |
+| `sdd-tasks` | Spec + Design (required) | Yes (`tasks`) |
+| `sdd-apply` | Tasks + Spec + Design | Yes (`apply-progress`) |
+| `sdd-verify` | Spec + Tasks | Yes (`verify-report`) |
+| `sdd-archive` | All artifacts | Yes (`archive-report`) |
+
+For SDD phases with required dependencies, the sub-agent reads them directly from the backend (engram or openspec) — the orchestrator passes artifact references (topic keys or file paths), NOT the content itself.
+
 ### State and Conventions (source of truth)
 Use shared convention files under `~/.gemini/antigravity/skills/_shared/` (global) or `.agent/skills/_shared/` (workspace):
 - `engram-convention.md` for artifact naming and two-step recovery

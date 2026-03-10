@@ -612,12 +612,36 @@ func componentPaths(homeDir string, selection model.Selection, adapters []agents
 				paths = append(paths, adapter.SystemPromptFile(homeDir))
 			}
 		case model.ComponentSDD:
-			if adapter.SystemPromptStrategy() == model.StrategyMarkdownSections {
+			if adapter.SupportsSystemPrompt() {
 				paths = append(paths, adapter.SystemPromptFile(homeDir))
 			}
 			if adapter.SupportsSlashCommands() {
 				for _, command := range sdd.OpenCodeCommands() {
 					paths = append(paths, filepath.Join(adapter.CommandsDir(homeDir), command.Name+".md"))
+				}
+			}
+			if adapter.Agent() == model.AgentOpenCode {
+				if p := adapter.SettingsPath(homeDir); p != "" {
+					paths = append(paths, p)
+				}
+			}
+			if adapter.SupportsSkills() {
+				skillDir := adapter.SkillsDir(homeDir)
+				if skillDir != "" {
+					paths = append(paths,
+						filepath.Join(skillDir, "_shared", "persistence-contract.md"),
+						filepath.Join(skillDir, "_shared", "engram-convention.md"),
+						filepath.Join(skillDir, "_shared", "openspec-convention.md"),
+						filepath.Join(skillDir, "sdd-init", "SKILL.md"),
+						filepath.Join(skillDir, "sdd-explore", "SKILL.md"),
+						filepath.Join(skillDir, "sdd-propose", "SKILL.md"),
+						filepath.Join(skillDir, "sdd-spec", "SKILL.md"),
+						filepath.Join(skillDir, "sdd-design", "SKILL.md"),
+						filepath.Join(skillDir, "sdd-tasks", "SKILL.md"),
+						filepath.Join(skillDir, "sdd-apply", "SKILL.md"),
+						filepath.Join(skillDir, "sdd-verify", "SKILL.md"),
+						filepath.Join(skillDir, "sdd-archive", "SKILL.md"),
+					)
 				}
 			}
 		case model.ComponentSkills:

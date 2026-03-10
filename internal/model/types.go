@@ -77,7 +77,7 @@ const (
 	StrategyMarkdownSections SystemPromptStrategy = iota
 	// StrategyFileReplace replaces the entire system prompt file (OpenCode AGENTS.md).
 	StrategyFileReplace
-	// StrategyAppendToFile appends content to an existing system prompt file (Gemini CLI, Cursor).
+	// StrategyAppendToFile appends content to an existing system prompt file.
 	StrategyAppendToFile
 )
 
