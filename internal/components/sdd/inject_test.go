@@ -1288,7 +1288,7 @@ func TestInjectOpenCodeMultiWritesPlugin(t *testing.T) {
 	}
 }
 
-func TestInjectOpenCodeSingleDoesNotWritePlugin(t *testing.T) {
+func TestInjectOpenCodeSingleWritesPlugin(t *testing.T) {
 	home := t.TempDir()
 
 	_, err := Inject(home, opencodeAdapter(), "single")
@@ -1296,9 +1296,9 @@ func TestInjectOpenCodeSingleDoesNotWritePlugin(t *testing.T) {
 		t.Fatalf("Inject(single) error = %v", err)
 	}
 
-	pluginsDir := filepath.Join(home, ".config", "opencode", "plugins")
-	if _, err := os.Stat(pluginsDir); err == nil {
-		t.Fatal("plugins directory should NOT exist in single mode")
+	pluginPath := filepath.Join(home, ".config", "opencode", "plugins", "background-agents.ts")
+	if _, err := os.Stat(pluginPath); err != nil {
+		t.Fatalf("plugin file should exist in single mode: %v", err)
 	}
 }
 

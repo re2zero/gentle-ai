@@ -673,9 +673,7 @@ func componentPaths(homeDir string, selection model.Selection, adapters []agents
 				if p := adapter.SettingsPath(homeDir); p != "" {
 					paths = append(paths, p)
 				}
-				if selection.SDDMode == model.SDDModeMulti {
-					paths = append(paths, filepath.Join(homeDir, ".config", "opencode", "plugins", "background-agents.ts"))
-				}
+				paths = append(paths, filepath.Join(homeDir, ".config", "opencode", "plugins", "background-agents.ts"))
 			}
 			if adapter.SupportsSkills() {
 				skillDir := adapter.SkillsDir(homeDir)

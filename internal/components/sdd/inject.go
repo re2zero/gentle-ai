@@ -131,15 +131,13 @@ func Inject(homeDir string, adapter agents.Adapter, sddMode model.SDDModeID, mod
 			changed = changed || agentResult.Changed
 			files = append(files, settingsPath)
 
-			// Install OpenCode plugins (multi-mode only).
-			if sddMode == model.SDDModeMulti {
-				pluginResult, err := installOpenCodePlugins(homeDir)
-				if err != nil {
-					return InjectionResult{}, err
-				}
-				changed = changed || pluginResult.Changed
-				files = append(files, pluginResult.Files...)
+			// Install OpenCode plugins (all SDD modes).
+			pluginResult, err := installOpenCodePlugins(homeDir)
+			if err != nil {
+				return InjectionResult{}, err
 			}
+			changed = changed || pluginResult.Changed
+			files = append(files, pluginResult.Files...)
 		}
 	}
 
