@@ -21,7 +21,7 @@
 
 ### All platforms
 
-- Go 1.22+ (for building from source).
+- Go 1.24+ (for building from source).
 - Node.js / npm if installing Claude Code (agent is installed via `npm install -g`).
 
 ## Run

@@ -1,8 +1,12 @@
 package engram
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
+	"runtime"
+	"strings"
 
 	"github.com/gentleman-programming/gentle-ai/internal/agents"
 	"github.com/gentleman-programming/gentle-ai/internal/assets"
@@ -42,8 +46,14 @@ func Inject(homeDir string, adapter agents.Adapter) (InjectionResult, error) {
 	// 1. Write MCP server config using the adapter's strategy.
 	switch adapter.MCPStrategy() {
 	case model.StrategySeparateMCPFiles:
+		// Engram v1.10.3+ writes an absolute path for the command field when
+		// `engram setup <agent>` is invoked. gentle-ai's Inject() runs after
+		// engram setup, so we must preserve any absolute command path already
+		// present instead of silently overwriting it with the relative "engram".
+		// See: https://github.com/Gentleman-Programming/gentle-ai/issues (engram absolute path regression)
 		mcpPath := adapter.MCPConfigPath(homeDir, "engram")
-		mcpWrite, err := filemerge.WriteFileAtomic(mcpPath, defaultEngramServerJSON, 0o644)
+		content := buildSeparateMCPContent(mcpPath, defaultEngramServerJSON)
+		mcpWrite, err := filemerge.WriteFileAtomic(mcpPath, content, 0o644)
 		if err != nil {
 			return InjectionResult{}, err
 		}
@@ -219,4 +229,69 @@ func readFileOrEmpty(path string) (string, error) {
 		return "", fmt.Errorf("read file %q: %w", path, err)
 	}
 	return string(data), nil
+}
+
+// buildSeparateMCPContent returns the content to write to the MCP server JSON
+// file for agents that use the StrategySeparateMCPFiles strategy (e.g. Claude
+// Code).
+//
+// Engram v1.10.3+ writes an absolute command path when `engram setup` is run.
+// gentle-ai runs Inject() after setup, so we must not overwrite that absolute
+// path with the relative "engram" string from defaultEngramServerJSON.
+//
+// Logic:
+//   - If the file does not exist yet, return defaultContent unchanged.
+//   - If the file exists but cannot be parsed as JSON, return defaultContent.
+//   - If the parsed JSON has a "command" value that is an absolute path to the
+//     engram binary, rebuild the config using that command and the canonical
+//     args (["mcp", "--tools=agent"]) so that the absolute path is preserved
+//     and the correct flags are always present.
+//   - Otherwise (relative command or other value), return defaultContent.
+func buildSeparateMCPContent(mcpPath string, defaultContent []byte) []byte {
+	raw, err := os.ReadFile(mcpPath)
+	if err != nil {
+		// File does not exist or is not readable — use the default.
+		return defaultContent
+	}
+
+	var existing map[string]any
+	if err := json.Unmarshal(raw, &existing); err != nil {
+		// Malformed JSON — use the default.
+		return defaultContent
+	}
+
+	cmd, ok := existing["command"].(string)
+	if !ok || !isAbsoluteEngramPath(cmd) {
+		// No command, or not an absolute path — use the default.
+		return defaultContent
+	}
+
+	// Rebuild with the preserved absolute command and the canonical args.
+	rebuilt := map[string]any{
+		"command": cmd,
+		"args":    []string{"mcp", "--tools=agent"},
+	}
+	encoded, err := json.MarshalIndent(rebuilt, "", "  ")
+	if err != nil {
+		// Should be impossible with a plain map — use the default as fallback.
+		return defaultContent
+	}
+	return append(encoded, '\n')
+}
+
+// isAbsoluteEngramPath reports whether path is an absolute filesystem path
+// that points to an engram binary.
+//
+// Engram setup writes the full resolved path of the binary it was invoked
+// from, so any absolute path ending in "engram" (Unix) or "engram.exe"
+// (Windows) is considered valid.
+func isAbsoluteEngramPath(path string) bool {
+	if !filepath.IsAbs(path) {
+		return false
+	}
+	base := filepath.Base(path)
+	if runtime.GOOS == "windows" {
+		return strings.EqualFold(base, "engram.exe") || strings.EqualFold(base, "engram")
+	}
+	return base == "engram"
 }

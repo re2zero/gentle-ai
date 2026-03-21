@@ -409,6 +409,134 @@ func TestInjectCodexInjectsTOMLKeys(t *testing.T) {
 	}
 }
 
+// ─── Engram setup absolute path preservation tests ────────────────────────────
+
+// TestInjectClaudePreservesAbsoluteCommandFromEngramSetup verifies that when
+// `engram setup claude-code` has already written an absolute-path command to
+// ~/.claude/mcp/engram.json (Engram v1.10.3+ behaviour), a subsequent call to
+// Inject() does NOT overwrite the absolute path with the relative "engram".
+func TestInjectClaudePreservesAbsoluteCommandFromEngramSetup(t *testing.T) {
+	home := t.TempDir()
+
+	// Simulate what `engram setup claude-code` writes on v1.10.3+:
+	// an absolute path as the command value.
+	absPath := "/opt/homebrew/bin/engram"
+	mcpPath := filepath.Join(home, ".claude", "mcp", "engram.json")
+	if err := os.MkdirAll(filepath.Dir(mcpPath), 0o755); err != nil {
+		t.Fatalf("MkdirAll error = %v", err)
+	}
+	setupContent := []byte(`{
+  "command": "/opt/homebrew/bin/engram",
+  "args": ["mcp", "--tools=agent"]
+}
+`)
+	if err := os.WriteFile(mcpPath, setupContent, 0o644); err != nil {
+		t.Fatalf("WriteFile(engram.json) error = %v", err)
+	}
+
+	// Now run Inject — should NOT overwrite the absolute command.
+	_, err := Inject(home, claudeAdapter())
+	if err != nil {
+		t.Fatalf("Inject() error = %v", err)
+	}
+
+	content, err := os.ReadFile(mcpPath)
+	if err != nil {
+		t.Fatalf("ReadFile(engram.json) error = %v", err)
+	}
+
+	text := string(content)
+	if !strings.Contains(text, absPath) {
+		t.Fatalf("Inject() overwrote absolute command path; want %q preserved, got:\n%s", absPath, text)
+	}
+	// Still must have --tools=agent.
+	assertArgsHaveToolsAgent(t, mcpPath)
+}
+
+// TestInjectClaudePreservesAbsoluteCommandIsIdempotent verifies that calling
+// Inject() twice when an absolute-path engram.json already exists does not
+// cause repeated writes (idempotency).
+func TestInjectClaudePreservesAbsoluteCommandIsIdempotent(t *testing.T) {
+	home := t.TempDir()
+
+	absPath := "/usr/local/bin/engram"
+	mcpPath := filepath.Join(home, ".claude", "mcp", "engram.json")
+	if err := os.MkdirAll(filepath.Dir(mcpPath), 0o755); err != nil {
+		t.Fatalf("MkdirAll error = %v", err)
+	}
+	setupContent := []byte(`{
+  "command": "/usr/local/bin/engram",
+  "args": ["mcp", "--tools=agent"]
+}
+`)
+	if err := os.WriteFile(mcpPath, setupContent, 0o644); err != nil {
+		t.Fatalf("WriteFile(engram.json) error = %v", err)
+	}
+
+	first, err := Inject(home, claudeAdapter())
+	if err != nil {
+		t.Fatalf("Inject() first error = %v", err)
+	}
+
+	second, err := Inject(home, claudeAdapter())
+	if err != nil {
+		t.Fatalf("Inject() second error = %v", err)
+	}
+	if second.Changed {
+		t.Fatalf("Inject() second changed = true after absolute-path setup; want idempotent (no change)")
+	}
+
+	// Absolute path must still be present.
+	content, err := os.ReadFile(mcpPath)
+	if err != nil {
+		t.Fatalf("ReadFile(engram.json) error = %v", err)
+	}
+	if !strings.Contains(string(content), absPath) {
+		t.Fatalf("absolute command path %q was lost after second Inject(); got:\n%s", absPath, string(content))
+	}
+	_ = first // first result not the focus of this test
+}
+
+// TestInjectClaudeAddsToolsAgentWhenSetupWritesBareArgs verifies that if
+// `engram setup` wrote an absolute command but with bare args (no --tools=agent),
+// Inject() adds --tools=agent while preserving the absolute path.
+func TestInjectClaudeAddsToolsAgentWhenSetupWritesBareArgs(t *testing.T) {
+	home := t.TempDir()
+
+	absPath := "/home/user/go/bin/engram"
+	mcpPath := filepath.Join(home, ".claude", "mcp", "engram.json")
+	if err := os.MkdirAll(filepath.Dir(mcpPath), 0o755); err != nil {
+		t.Fatalf("MkdirAll error = %v", err)
+	}
+	// Bare mcp arg without --tools=agent — older engram setup format.
+	setupContent := []byte(`{
+  "command": "/home/user/go/bin/engram",
+  "args": ["mcp"]
+}
+`)
+	if err := os.WriteFile(mcpPath, setupContent, 0o644); err != nil {
+		t.Fatalf("WriteFile(engram.json) error = %v", err)
+	}
+
+	_, err := Inject(home, claudeAdapter())
+	if err != nil {
+		t.Fatalf("Inject() error = %v", err)
+	}
+
+	content, err := os.ReadFile(mcpPath)
+	if err != nil {
+		t.Fatalf("ReadFile(engram.json) error = %v", err)
+	}
+	text := string(content)
+
+	// Absolute path must be preserved.
+	if !strings.Contains(text, absPath) {
+		t.Fatalf("absolute path %q was lost; got:\n%s", absPath, text)
+	}
+	// --tools=agent must be added.
+	assertArgsHaveToolsAgent(t, mcpPath)
+}
+
 func TestInjectCodexIsIdempotent(t *testing.T) {
 	home := t.TempDir()
 
