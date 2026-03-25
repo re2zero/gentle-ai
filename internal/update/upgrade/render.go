@@ -22,11 +22,7 @@ func RenderUpgradeReport(report UpgradeReport) string {
 	b.WriteString("  Agent configs are preserved — no install or sync is performed.\n\n")
 
 	if len(report.Results) == 0 {
-		if len(report.CheckFailures) > 0 {
-			fmt.Fprintf(&b, "  Update check incomplete. Failed to check: %s.\n", strings.Join(report.CheckFailures, ", "))
-		} else {
-			b.WriteString("  No upgrades available. All managed tools are up to date.\n")
-		}
+		b.WriteString("  No upgrades available. All managed tools are up to date.\n")
 		return b.String()
 	}
 
@@ -68,9 +64,6 @@ func RenderUpgradeReport(report UpgradeReport) string {
 	}
 	if report.BackupWarning != "" {
 		fmt.Fprintf(&b, "  WARNING: %s\n", report.BackupWarning)
-	}
-	if len(report.CheckFailures) > 0 {
-		fmt.Fprintf(&b, "  WARNING: update check incomplete for: %s\n", strings.Join(report.CheckFailures, ", "))
 	}
 
 	if report.DryRun {
