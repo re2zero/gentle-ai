@@ -13,7 +13,9 @@
       "sdd-archive",
       "judgment-day",
       "go-testing",
-      "skill-creator"
+      "skill-creator",
+      "branch-pr",
+      "issue-creation"
     ]
   },
   {
@@ -30,7 +32,9 @@
       "sdd-archive",
       "judgment-day",
       "go-testing",
-      "skill-creator"
+      "skill-creator",
+      "branch-pr",
+      "issue-creation"
     ]
   },
   {

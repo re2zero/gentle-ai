@@ -20,6 +20,8 @@ var sddSkills = []model.SkillID{
 var foundationSkills = []model.SkillID{
 	model.SkillGoTesting,
 	model.SkillCreator,
+	model.SkillBranchPR,
+	model.SkillIssueCreation,
 }
 
 // SkillsForPreset returns which skills should be installed for a given preset.
