@@ -9,7 +9,7 @@
 | Persona | ID | Description |
 |---------|-----|-------------|
 | Gentleman | `gentleman` | Teaching-oriented mentor persona — pushes back on bad practices, explains the why |
-| Neutral | `neutral` | Clean, professional tone — no personality, just facts |
+| Neutral | `neutral` | Same teacher, same philosophy, no regional language — warm and professional |
 | Custom | `custom` | Bring your own persona instructions |
 
 ---

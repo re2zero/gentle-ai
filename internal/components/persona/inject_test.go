@@ -10,6 +10,7 @@ import (
 	"github.com/gentleman-programming/gentle-ai/internal/agents"
 	"github.com/gentleman-programming/gentle-ai/internal/agents/claude"
 	"github.com/gentleman-programming/gentle-ai/internal/agents/opencode"
+	"github.com/gentleman-programming/gentle-ai/internal/assets"
 	"github.com/gentleman-programming/gentle-ai/internal/model"
 )
 
@@ -166,12 +167,13 @@ func TestInjectClaudeNeutralWritesMinimalContent(t *testing.T) {
 	}
 
 	text := string(content)
-	if !strings.Contains(text, "helpful") {
-		t.Fatal("Neutral persona should contain 'helpful'")
+	// Neutral persona is the same teacher — should have Senior Architect.
+	if !strings.Contains(text, "Senior Architect") {
+		t.Fatal("Neutral persona should contain 'Senior Architect'")
 	}
-	// Should NOT have gentleman-specific content.
-	if strings.Contains(text, "Senior Architect") {
-		t.Fatal("Neutral persona should not contain gentleman content")
+	// Should NOT have gentleman-specific regional language.
+	if strings.Contains(text, "Rioplatense") {
+		t.Fatal("Neutral persona should not contain Rioplatense language")
 	}
 }
 
@@ -297,8 +299,11 @@ func TestInjectOpenCodeNeutralPreservesManagedSections(t *testing.T) {
 	text := string(content)
 
 	// Neutral content should be present
-	if !strings.Contains(text, "Be helpful, direct, and technically precise") {
+	if !strings.Contains(text, "Senior Architect") {
 		t.Fatal("AGENTS.md missing neutral persona content")
+	}
+	if strings.Contains(text, "Rioplatense") {
+		t.Fatal("AGENTS.md has Rioplatense language in neutral persona — should be neutral tone")
 	}
 
 	// Managed sections MUST be preserved
@@ -309,9 +314,9 @@ func TestInjectOpenCodeNeutralPreservesManagedSections(t *testing.T) {
 		t.Fatal("AGENTS.md lost engram protocol section after switching to neutral persona")
 	}
 
-	// Old gentleman content should be gone
-	if strings.Contains(text, "Senior Architect") {
-		t.Fatal("AGENTS.md still has gentleman persona content after switching to neutral")
+	// Gentleman-specific language should be gone — neutral has the same personality but no regional language
+	if strings.Contains(text, "Rioplatense") {
+		t.Fatal("AGENTS.md still has Rioplatense language after switching to neutral")
 	}
 }
 
@@ -350,8 +355,11 @@ func TestInjectVSCodeNeutralPreservesManagedSections(t *testing.T) {
 	}
 	text := string(content)
 
-	if !strings.Contains(text, "Be helpful, direct, and technically precise") {
-		t.Fatal("instructions file missing neutral persona")
+	if !strings.Contains(text, "Senior Architect") {
+		t.Fatal("instructions file missing neutral persona content")
+	}
+	if strings.Contains(text, "Rioplatense") {
+		t.Fatal("instructions file has Rioplatense language in neutral persona")
 	}
 	if !strings.Contains(text, "<!-- gentle-ai:sdd-orchestrator -->") {
 		t.Fatal("instructions file lost SDD section after switching to neutral persona")
@@ -391,7 +399,7 @@ func TestInjectNeutralPreservesWhenMarkerAtByteZero(t *testing.T) {
 	}
 	text := string(content)
 
-	if !strings.Contains(text, "Be helpful, direct, and technically precise") {
+	if !strings.Contains(text, "Senior Architect") {
 		t.Fatal("missing neutral persona content")
 	}
 	if !strings.Contains(text, "<!-- gentle-ai:sdd-orchestrator -->") {
@@ -413,7 +421,10 @@ func TestInjectNeutralIdempotentWithManagedSections(t *testing.T) {
 	}
 
 	// Set up: neutral + managed sections
-	initial := "Be helpful, direct, and technically precise. Focus on accuracy and clarity.\n\n<!-- gentle-ai:sdd-orchestrator -->\nSDD content\n<!-- /gentle-ai:sdd-orchestrator -->\n"
+	// Simulate a file with neutral persona + managed sections.
+	// Use a fingerprint from the real neutral asset so the test is realistic.
+	neutralContent := assets.MustRead("generic/persona-neutral.md")
+	initial := neutralContent + "\n\n<!-- gentle-ai:sdd-orchestrator -->\nSDD content\n<!-- /gentle-ai:sdd-orchestrator -->\n"
 	if err := os.WriteFile(promptPath, []byte(initial), 0o644); err != nil {
 		t.Fatalf("WriteFile() error = %v", err)
 	}
@@ -444,7 +455,7 @@ func TestInjectNeutralIdempotentWithManagedSections(t *testing.T) {
 	if strings.Count(text, "<!-- gentle-ai:sdd-orchestrator -->") != 1 {
 		t.Fatal("SDD section duplicated after idempotent neutral inject")
 	}
-	if strings.Count(text, "Be helpful") != 1 {
+	if strings.Count(text, "## Rules") != 1 {
 		t.Fatal("neutral persona duplicated after idempotent inject")
 	}
 }

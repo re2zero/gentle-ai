@@ -17,7 +17,10 @@ type InjectionResult struct {
 	Files   []string
 }
 
-const neutralPersonaContent = "Be helpful, direct, and technically precise. Focus on accuracy and clarity.\n"
+// neutralPersonaContent is a minimal fallback — the real neutral persona is
+// loaded from the embedded asset in personaContent(). This constant is kept
+// only as a safety net if the asset is somehow unavailable.
+const neutralPersonaFallback = "Be helpful, direct, and technically precise. Focus on accuracy and clarity.\n"
 
 // outputStyleOverlayJSON is the settings.json overlay to enable the Gentleman output style.
 var outputStyleOverlayJSON = []byte("{\n  \"outputStyle\": \"Gentleman\"\n}\n")
@@ -221,7 +224,8 @@ func Inject(homeDir string, adapter agents.Adapter, persona model.PersonaID) (In
 func personaContent(agent model.AgentID, persona model.PersonaID) string {
 	switch persona {
 	case model.PersonaNeutral:
-		return neutralPersonaContent
+		// Neutral persona: same teacher, same philosophy, no regional language.
+		return assets.MustRead("generic/persona-neutral.md")
 	case model.PersonaCustom:
 		return ""
 	default:
