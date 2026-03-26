@@ -98,7 +98,7 @@ ALL sub-agent launch prompts MUST include pre-resolved skill references:
 ```
   SKILL: Load `{skill-path}` before starting.
 ```
-The orchestrator resolves skill paths from the registry ONCE (at session start or first delegation), passes the exact path to each sub-agent. Sub-agents do NOT search for the skill registry themselves. Also reads the Model Assignments table once per session, caches `phase → alias`, includes that alias in every Agent tool call via `model`.
+The orchestrator resolves skill paths from the registry ONCE (at session start or first delegation) and passes the exact path to each sub-agent. Sub-agents use the paths provided; if none were provided, they fall back to self-discovery via the skill registry. Also reads the Model Assignments table once per session, caches `phase → alias`, includes that alias in every Agent tool call via `model`.
 
 Orchestrator skill resolution (do once per session):
 1. `mem_search(query: "skill-registry", project: "{project}")` → get registry
@@ -115,7 +115,7 @@ Sub-agents get a fresh context with NO memory. The orchestrator controls context
 - Read context: orchestrator searches engram (`mem_search`) for relevant prior context and passes it in the sub-agent prompt. Sub-agent does NOT search engram itself.
 - Write context: sub-agent MUST save significant discoveries, decisions, or bug fixes to engram via `mem_save` before returning. Sub-agent has full detail — save before returning, not after.
 - Always add to sub-agent prompt: `"If you make important discoveries, decisions, or fix bugs, save them to engram via mem_save with project: '{project}'."`
-- Skills: orchestrator pre-resolves skill paths from the registry and passes them directly. Sub-agents do NOT search for the registry.
+- Skills: orchestrator pre-resolves skill paths from the registry and passes them directly. Sub-agents fall back to self-discovery if none provided.
 
 #### SDD Phases
 
