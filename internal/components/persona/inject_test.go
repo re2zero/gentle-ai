@@ -424,7 +424,7 @@ func TestInjectNeutralIdempotentWithManagedSections(t *testing.T) {
 	// Simulate a file with neutral persona + managed sections.
 	// Use a fingerprint from the real neutral asset so the test is realistic.
 	neutralContent := assets.MustRead("generic/persona-neutral.md")
-	initial := neutralContent + "\n\n<!-- gentle-ai:sdd-orchestrator -->\nSDD content\n<!-- /gentle-ai:sdd-orchestrator -->\n"
+	initial := neutralContent + "\n\n<!-- gentle-ai:sdd-orchestrator -->\nSDD content\n<!-- /gentle-ai:sdd-orchestrator -->\n\n<!-- gentle-ai:engram-protocol -->\nEngram content\n<!-- /gentle-ai:engram-protocol -->\n"
 	if err := os.WriteFile(promptPath, []byte(initial), 0o644); err != nil {
 		t.Fatalf("WriteFile() error = %v", err)
 	}
@@ -457,6 +457,9 @@ func TestInjectNeutralIdempotentWithManagedSections(t *testing.T) {
 	}
 	if strings.Count(text, "## Rules") != 1 {
 		t.Fatal("neutral persona duplicated after idempotent inject")
+	}
+	if strings.Count(text, "<!-- gentle-ai:engram-protocol -->") != 1 {
+		t.Fatal("engram section duplicated after idempotent neutral inject")
 	}
 }
 
@@ -880,6 +883,31 @@ func TestInjectVSCodePreservesNonPersonaGitHubFile(t *testing.T) {
 	}
 	if string(remaining) != userContent {
 		t.Fatalf("user file content was modified: got %q", string(remaining))
+	}
+}
+
+func TestNeutralAndGentlemanToneSectionsMatch(t *testing.T) {
+	neutral := assets.MustRead("generic/persona-neutral.md")
+	gentleman := assets.MustRead("generic/persona-gentleman.md")
+
+	extractSection := func(content, section string) string {
+		idx := strings.Index(content, "## "+section)
+		if idx < 0 {
+			return ""
+		}
+		rest := content[idx:]
+		nextIdx := strings.Index(rest[1:], "\n## ")
+		if nextIdx < 0 {
+			return rest
+		}
+		return rest[:nextIdx+1]
+	}
+
+	neutralTone := extractSection(neutral, "Tone")
+	gentlemanTone := extractSection(gentleman, "Tone")
+
+	if neutralTone != gentlemanTone {
+		t.Fatalf("## Tone sections diverged:\nneutral:\n%s\ngentleman:\n%s", neutralTone, gentlemanTone)
 	}
 }
 
